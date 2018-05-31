@@ -81,13 +81,19 @@ func (w *Writer) Rollback() error {
 	return os.Remove(w.tmp.Name())
 }
 
-func (w *Writer) Commit() error {
+func (w *Writer) Commit(syncClose bool) error {
 	w.checksum = w.h.Sum(nil)
 	if err := xattr.Set(w.tmp.Name(), "user.md5", []byte(hex.EncodeToString(w.checksum))); err != nil {
 		return errors.New("set user.md xattr")
 	}
 	if err := xattr.Set(w.tmp.Name(), "user.size", []byte(strconv.Itoa(w.size))); err != nil {
 		return errors.New("set user.size xattr")
+	}
+
+	if syncClose && w.syncLen > 0 {
+		if err := w.sync(); err != nil {
+			return err
+		}
 	}
 
 	if err := w.tmp.Close(); err != nil {
@@ -99,7 +105,7 @@ func (w *Writer) Commit() error {
 	return nil
 }
 
-func writeFile(path string, size, syncFileRange int) error {
+func writeFile(path string, size, syncFileRange int, syncClose bool) error {
 	w, err := NewWriter(path, size, syncFileRange)
 	if err != nil {
 		return err
@@ -110,7 +116,7 @@ func writeFile(path string, size, syncFileRange int) error {
 		return err
 	}
 
-	if err := w.Commit(); err != nil {
+	if err := w.Commit(syncClose); err != nil {
 		w.Rollback()
 		return err
 	}

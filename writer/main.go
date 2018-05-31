@@ -26,6 +26,7 @@ func main() {
 		testDir       = flag.String("testDir", "testdata", "test data directory")
 		numFiles      = flag.Int("numFiles", NumberOfFilesInDir, "number of file in a directory")
 		syncFileRange = flag.Int("syncFileRange", SizeOfSyncFileRange, "size of sync_file_range")
+		syncClose     = flag.Bool("syncClose", false, "call sync_file_range before close")
 	)
 	flag.Parse()
 
@@ -46,7 +47,7 @@ func main() {
 			log.Printf("start writing files into %s ...\n", dir)
 			for i, size := range genRandomSizes(*numFiles, MinFileSize, MaxFileSize) {
 				path := filepath.Join(dir, fmt.Sprintf("%03d.data", i))
-				if err := writeFile(path, size, *syncFileRange); err != nil {
+				if err := writeFile(path, size, *syncFileRange, *syncClose); err != nil {
 					fmt.Println(err) // ignore error
 				}
 			}
