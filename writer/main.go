@@ -10,19 +10,26 @@ import (
 )
 
 const (
+	KiB = 1024
+	MiB = 1024 * KiB
+
 	MinFileSize = 4 * KiB
 	MaxFileSize = 5 * MiB
 
-	NumberOfFilesInDir = 1000
+	NumberOfFilesInDir  = 1000
+	SizeOfSyncFileRange = 1 * MiB
 )
 
 func main() {
 	var (
-		parallel = flag.Int("parallel", 1, "parallel number of writing file")
-		testDir  = flag.String("testDir", "testdata", "test data directory")
-		numFiles = flag.Int("numFiles", NumberOfFilesInDir, "number of file in a directory")
+		parallel      = flag.Int("parallel", 1, "parallel number of writing file")
+		testDir       = flag.String("testDir", "testdata", "test data directory")
+		numFiles      = flag.Int("numFiles", NumberOfFilesInDir, "number of file in a directory")
+		syncFileRange = flag.Int("syncFileRange", SizeOfSyncFileRange, "size of sync_file_range")
 	)
 	flag.Parse()
+
+	log.Printf("size of syncFileRange: %d", *syncFileRange)
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < *parallel; i++ {
@@ -39,7 +46,7 @@ func main() {
 			log.Printf("start writing files into %s ...\n", dir)
 			for i, size := range genRandomSizes(*numFiles, MinFileSize, MaxFileSize) {
 				path := filepath.Join(dir, fmt.Sprintf("%03d.data", i))
-				if err := writeFile(path, size); err != nil {
+				if err := writeFile(path, size, *syncFileRange); err != nil {
 					fmt.Println(err) // ignore error
 				}
 			}

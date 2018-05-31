@@ -13,9 +13,7 @@ import (
 	"github.com/pkg/xattr"
 )
 
-const (
-	defaultSyncFileRange = 10 * 1024
-)
+const ()
 
 type Writer struct {
 	path          string
@@ -27,7 +25,7 @@ type Writer struct {
 	syncLen       int64
 }
 
-func NewWriter(path string) (w *Writer, err error) {
+func NewWriter(path string, syncFileRange int) (w *Writer, err error) {
 	tmp, err := ioutil.TempFile(filepath.Dir(path), "tmp-"+filepath.Base(path)+"-")
 	if err != nil {
 		return nil, errors.New("create temp file")
@@ -37,7 +35,7 @@ func NewWriter(path string) (w *Writer, err error) {
 		path:          path,
 		tmp:           tmp,
 		h:             md5.New(),
-		syncFileRange: defaultSyncFileRange,
+		syncFileRange: int64(syncFileRange),
 	}
 	return
 }
@@ -49,6 +47,10 @@ func (w *Writer) Write(p []byte) (int, error) {
 		return n, err
 	}
 	w.syncLen += int64(n)
+
+	if w.syncFileRange <= 0 {
+		return n, nil
+	}
 
 	if w.syncLen >= w.syncFileRange {
 		if err := w.sync(); err != nil {
@@ -90,8 +92,8 @@ func (w *Writer) Commit() error {
 	return nil
 }
 
-func writeFile(path string, size int) error {
-	w, err := NewWriter(path)
+func writeFile(path string, size, syncFileRange int) error {
+	w, err := NewWriter(path, syncFileRange)
 	if err != nil {
 		return err
 	}

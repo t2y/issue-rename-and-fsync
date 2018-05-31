@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-const (
-	KiB = 1024
-	MiB = 1024 * KiB
-)
-
 func randomBytes(n int) []byte {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
