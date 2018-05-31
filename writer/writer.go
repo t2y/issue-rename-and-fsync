@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pkg/xattr"
 )
@@ -20,12 +21,13 @@ type Writer struct {
 	tmp           *os.File
 	h             hash.Hash
 	checksum      []byte
+	size          int
 	syncFileRange int64
 	syncOffset    int64
 	syncLen       int64
 }
 
-func NewWriter(path string, syncFileRange int) (w *Writer, err error) {
+func NewWriter(path string, size int, syncFileRange int) (w *Writer, err error) {
 	tmp, err := ioutil.TempFile(filepath.Dir(path), "tmp-"+filepath.Base(path)+"-")
 	if err != nil {
 		return nil, errors.New("create temp file")
@@ -35,6 +37,7 @@ func NewWriter(path string, syncFileRange int) (w *Writer, err error) {
 		path:          path,
 		tmp:           tmp,
 		h:             md5.New(),
+		size:          size,
 		syncFileRange: int64(syncFileRange),
 	}
 	return
@@ -81,8 +84,12 @@ func (w *Writer) Rollback() error {
 func (w *Writer) Commit() error {
 	w.checksum = w.h.Sum(nil)
 	if err := xattr.Set(w.tmp.Name(), "user.md5", []byte(hex.EncodeToString(w.checksum))); err != nil {
-		return errors.New("set xattr")
+		return errors.New("set user.md xattr")
 	}
+	if err := xattr.Set(w.tmp.Name(), "user.size", []byte(strconv.Itoa(w.size))); err != nil {
+		return errors.New("set user.size xattr")
+	}
+
 	if err := w.tmp.Close(); err != nil {
 		return errors.New("close temp file")
 	}
@@ -93,7 +100,7 @@ func (w *Writer) Commit() error {
 }
 
 func writeFile(path string, size, syncFileRange int) error {
-	w, err := NewWriter(path, syncFileRange)
+	w, err := NewWriter(path, size, syncFileRange)
 	if err != nil {
 		return err
 	}
