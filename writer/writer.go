@@ -13,6 +13,10 @@ import (
 	"github.com/pkg/xattr"
 )
 
+const (
+	defaultSyncFileRange = 10 * 1024
+)
+
 type Writer struct {
 	path          string
 	tmp           *os.File
@@ -30,9 +34,10 @@ func NewWriter(path string) (w *Writer, err error) {
 	}
 
 	w = &Writer{
-		path: path,
-		tmp:  tmp,
-		h:    md5.New(),
+		path:          path,
+		tmp:           tmp,
+		h:             md5.New(),
+		syncFileRange: defaultSyncFileRange,
 	}
 	return
 }
