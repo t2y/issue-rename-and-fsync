@@ -28,7 +28,8 @@ func (c *Checker) Verify() error {
 	for _, path := range paths {
 		storedChecksum, err := getChecksum(path)
 		if err != nil {
-			log.Println(err)
+			fmt.Println("cannot get checksum from xattr")
+			fmt.Printf("  - path: %s\n", path)
 			continue
 		}
 
@@ -50,7 +51,10 @@ func (c *Checker) Verify() error {
 			fmt.Printf("  - user.md5:   %x\n", storedChecksum)
 			fmt.Printf("  - calculated: %x\n", calc)
 			if info, err := f.Stat(); err == nil {
-				fmt.Printf("  - size: %d\n", info.Size())
+				if storedSize, err := getFileSize(path); err == nil {
+					fmt.Printf("  - user.size  : %d\n", storedSize)
+				}
+				fmt.Printf("  - actual size: %d\n", info.Size())
 				fmt.Printf("  - mtime: %v\n", info.ModTime())
 			}
 			fmt.Println()

@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pkg/xattr"
 )
 
 func getChecksum(path string) ([]byte, error) {
-	vv, err := xattr.Get(path, "user.md5")
+	value, err := xattr.Get(path, "user.md5")
 	if err != nil {
 		if e, ok := err.(*xattr.Error); ok {
 			return nil, e.Err
@@ -19,8 +20,8 @@ func getChecksum(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	checksum := make([]byte, hex.DecodedLen(len(vv)))
-	n, err := hex.Decode(checksum, vv)
+	checksum := make([]byte, hex.DecodedLen(len(value)))
+	n, err := hex.Decode(checksum, value)
 	if err != nil {
 		return nil, fmt.Errorf("checksum is invalid encoding: %s", path)
 	}
@@ -28,6 +29,17 @@ func getChecksum(path string) ([]byte, error) {
 		return nil, fmt.Errorf("checksum is invalid length: %s", path)
 	}
 	return checksum, nil
+}
+
+func getFileSize(path string) (int, error) {
+	size, err := xattr.Get(path, "user.size")
+	if err != nil {
+		if e, ok := err.(*xattr.Error); ok {
+			return 0, e.Err
+		}
+		return 0, err
+	}
+	return strconv.Atoi(string(size))
 }
 
 func getSubDirs(baseDir string) ([]string, error) {
