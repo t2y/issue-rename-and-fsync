@@ -17,28 +17,30 @@ import (
 const ()
 
 type Writer struct {
-	path          string
-	tmp           *os.File
-	h             hash.Hash
-	checksum      []byte
-	size          int
-	syncFileRange int64
-	syncOffset    int64
-	syncLen       int64
+	path           string
+	tmp            *os.File
+	h              hash.Hash
+	checksum       []byte
+	size           int
+	syncFileRange  int64
+	syncOffset     int64
+	syncLen        int64
+	disableFadvice bool
 }
 
-func NewWriter(path string, size int, syncFileRange int) (w *Writer, err error) {
+func NewWriter(path string, size int, syncFileRange int, disableFadvice bool) (w *Writer, err error) {
 	tmp, err := ioutil.TempFile(filepath.Dir(path), "tmp-"+filepath.Base(path)+"-")
 	if err != nil {
 		return nil, errors.New("create temp file")
 	}
 
 	w = &Writer{
-		path:          path,
-		tmp:           tmp,
-		h:             md5.New(),
-		size:          size,
-		syncFileRange: int64(syncFileRange),
+		path:           path,
+		tmp:            tmp,
+		h:              md5.New(),
+		size:           size,
+		syncFileRange:  int64(syncFileRange),
+		disableFadvice: disableFadvice,
 	}
 	return
 }
@@ -68,8 +70,10 @@ func (w *Writer) sync() error {
 		return errors.New("sync_file_range")
 	}
 
-	if err := fadvise(int(w.tmp.Fd()), w.syncOffset, w.syncLen, FADV_DONTNEED); err != nil {
-		return errors.New("posix_fadvise")
+	if !w.disableFadvice {
+		if err := fadvise(int(w.tmp.Fd()), w.syncOffset, w.syncLen, FADV_DONTNEED); err != nil {
+			return errors.New("posix_fadvise")
+		}
 	}
 
 	w.syncOffset, w.syncLen = w.syncOffset+w.syncLen, 0
@@ -105,8 +109,8 @@ func (w *Writer) Commit(syncClose bool) error {
 	return nil
 }
 
-func writeFile(path string, size, syncFileRange int, syncClose bool) error {
-	w, err := NewWriter(path, size, syncFileRange)
+func writeFile(path string, size, syncFileRange int, syncClose, disableFadvice bool) error {
+	w, err := NewWriter(path, size, syncFileRange, disableFadvice)
 	if err != nil {
 		return err
 	}

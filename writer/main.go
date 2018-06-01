@@ -22,11 +22,12 @@ const (
 
 func main() {
 	var (
-		parallel      = flag.Int("parallel", 1, "parallel number of writing file")
-		testDir       = flag.String("testDir", "testdata", "test data directory")
-		numFiles      = flag.Int("numFiles", NumberOfFilesInDir, "number of file in a directory")
-		syncFileRange = flag.Int("syncFileRange", SizeOfSyncFileRange, "size of sync_file_range")
-		syncClose     = flag.Bool("syncClose", false, "call sync_file_range before close")
+		parallel       = flag.Int("parallel", 1, "parallel number of writing file")
+		testDir        = flag.String("testDir", "testdata", "test data directory")
+		numFiles       = flag.Int("numFiles", NumberOfFilesInDir, "number of file in a directory")
+		syncFileRange  = flag.Int("syncFileRange", SizeOfSyncFileRange, "size of sync_file_range")
+		syncClose      = flag.Bool("syncClose", false, "call sync_file_range before close")
+		disableFadvice = flag.Bool("disableFadvice", false, "do not call fadvice after sync_file_range")
 	)
 	flag.Parse()
 
@@ -47,7 +48,7 @@ func main() {
 			log.Printf("start writing files into %s ...\n", dir)
 			for i, size := range genRandomSizes(*numFiles, MinFileSize, MaxFileSize) {
 				path := filepath.Join(dir, fmt.Sprintf("%03d.data", i))
-				if err := writeFile(path, size, *syncFileRange, *syncClose); err != nil {
+				if err := writeFile(path, size, *syncFileRange, *syncClose, *disableFadvice); err != nil {
 					fmt.Println(err) // ignore error
 				}
 			}
